@@ -12,8 +12,9 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
+use TypeIdentifier\Service\EffectivePrimitiveTypeIdentifierService;
 
-#[Route('/admin/appuser')]
+#[Route(path: '/admin/appuser')]
 final class AppUserController extends AbstractController
 {
     #[Route(name: 'app_user_index', methods: ['GET'])]
@@ -24,7 +25,7 @@ final class AppUserController extends AbstractController
         ]);
     }
 
-    #[Route('/new', name: 'app_user_new', methods: ['GET', 'POST'])]
+    #[Route(path: '/new', name: 'app_user_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {
         $appUser = new AppUser();
@@ -44,7 +45,7 @@ final class AppUserController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_user_show', methods: ['GET'])]
+    #[Route(path: '/{id}', name: 'app_user_show', methods: ['GET'])]
     public function show(AppUser $appUser): Response
     {
         return $this->render('app_user/show.html.twig', [
@@ -52,12 +53,13 @@ final class AppUserController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}/edit', name: 'app_user_edit', methods: ['GET', 'POST'])]
+    #[Route(path: '/{id}/edit', name: 'app_user_edit', methods: ['GET', 'POST'])]
     public function edit(
         Request $request,
         AppUser $appUser,
         EntityManagerInterface $entityManager,
-        UserPasswordHasherInterface $passwordHasher): Response
+        UserPasswordHasherInterface $passwordHasher,
+        EffectivePrimitiveTypeIdentifierService $epti): Response
     {
         $user = $this->getUser();
         if (!$user instanceof AppUser) {
@@ -68,8 +70,8 @@ final class AppUserController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $plainPassword = $form->get('plainPassword')->getData();
-            if (null !== $plainPassword && '' !== $plainPassword) {
+            $plainPassword = $epti->getStringValue($form->get('plainPassword')->getData(), trim: true, forceString: true);
+            if ('' !== $plainPassword) {
                 $appUser->setPassword($passwordHasher->hashPassword($appUser, $plainPassword));
             }
 
@@ -84,10 +86,10 @@ final class AppUserController extends AbstractController
         ]);
     }
 
-    #[Route('/{id}', name: 'app_user_delete', methods: ['POST'])]
+    #[Route(path: '/{id}', name: 'app_user_delete', methods: ['POST'])]
     public function delete(Request $request, AppUser $appUser, EntityManagerInterface $entityManager): \Symfony\Component\HttpFoundation\RedirectResponse
     {
-        if ($this->isCsrfTokenValid('delete'.$appUser->getId(), $request->getPayload()->getString('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $appUser->getId(), $request->getPayload()->getString('_token'))) {
             $entityManager->remove($appUser);
             $entityManager->flush();
         }

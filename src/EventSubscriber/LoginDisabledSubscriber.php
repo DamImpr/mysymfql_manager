@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\EventSubscriber;
 
 use App\Entity\AppUser;
@@ -35,7 +37,7 @@ final readonly class LoginDisabledSubscriber implements EventSubscriberInterface
             return;
         }
 
-        if (!in_array(RoleEnum::ROLE_DISABLED->value, $user->getRoles(), true)) {
+        if (!\in_array(RoleEnum::ROLE_DISABLED->value, $user->getRoles(), strict: true)) {
             return;
         }
 

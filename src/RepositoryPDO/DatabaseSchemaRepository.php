@@ -27,12 +27,15 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             $stmt->execute();
 
-            return $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            return $this->fetchColumnList($stmt);
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function getVersion(): array
     {
         $query = 'SELECT @@version';
@@ -41,57 +44,57 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             $stmt->execute();
 
-            return $stmt->fetch(\PDO::FETCH_ASSOC);
+            return $this->fetchOneAssoc($stmt);
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function useDbName(string $dbName): bool
     {
-        $query = sprintf('USE %s', $this->quoteIdentifier($dbName));
+        $query = \sprintf('USE %s', $this->quoteIdentifier($dbName));
         try {
             $stmt = $this->pdo->prepare($query);
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function optimizeTable(string $table): bool
     {
-        $query = sprintf('OPTIMIZE TABLE %s', $this->quoteIdentifier($table));
+        $query = \sprintf('OPTIMIZE TABLE %s', $this->quoteIdentifier($table));
         try {
             $stmt = $this->pdo->prepare($query);
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function optimizeWithAlterTable(string $table): bool
     {
-        $query = sprintf('ALTER TABLE %s ENGINE=INNODB;', $this->quoteIdentifier($table));
+        $query = \sprintf('ALTER TABLE %s ENGINE=INNODB;', $this->quoteIdentifier($table));
         try {
             $stmt = $this->pdo->prepare($query);
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function analyzeTable(string $table): bool
     {
-        $query = sprintf('ANALYZE TABLE %s;', $this->quoteIdentifier($table));
+        $query = \sprintf('ANALYZE TABLE %s;', $this->quoteIdentifier($table));
         try {
             $stmt = $this->pdo->prepare($query);
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -106,23 +109,26 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             $stmt->execute();
 
-            return $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            return $this->fetchColumnList($stmt);
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
+    /**
+     * @return list<array<string, mixed>>
+     */
     public function showCreateTable(string $table): array
     {
-        $query = sprintf('SHOW CREATE TABLE %s;', $this->quoteIdentifier($table));
+        $query = \sprintf('SHOW CREATE TABLE %s;', $this->quoteIdentifier($table));
         try {
             $stmt = $this->pdo->prepare($query);
 
             $stmt->execute();
 
-            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            return $this->fetchAllAssoc($stmt);
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -157,23 +163,34 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             $stmt->execute();
 
-            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            return array_map(fn (array $row): array => [
+                'nome_tabella' => $this->epti->getStringValueFromArray('nome_tabella', $row, forceString: true),
+                'engine' => $this->epti->getStringValueFromArray('engine', $row, forceString: true),
+                'collation' => $this->epti->getStringValueFromArray('collation', $row, forceString: true),
+                'record' => $this->epti->getIntValueFromArray('record', $row),
+                'dimensione' => $this->epti->getFloatValueFromArray('dimensione', $row),
+                'empty_space' => $this->epti->getFloatValueFromArray('empty_space', $row),
+                'auto_increment' => isset($row['auto_increment']) ? $this->epti->getIntValueFromArray('auto_increment', $row) : null,
+                'create_time' => isset($row['create_time']) ? $this->epti->getStringValueFromArray('create_time', $row, forceString: true) : null,
+                'update_time' => isset($row['update_time']) ? $this->epti->getStringValueFromArray('update_time', $row, forceString: true) : null,
+                'commento' => $this->epti->getStringValueFromArray('commento', $row, forceString: true),
+            ], $this->fetchAllAssoc($stmt));
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function countTableRow(string $table): int
     {
-        $query = sprintf('SELECT COUNT(*) as table_row FROM %s', $table);
+        $query = \sprintf('SELECT COUNT(*) as table_row FROM %s', $table);
         try {
             $stmt = $this->pdo->prepare($query);
 
             $stmt->execute();
 
-            return $stmt->fetch(\PDO::FETCH_ASSOC)['table_row'] ?? 0;
+            return $this->epti->getIntValueFromArray('table_row', $this->fetchOneAssoc($stmt));
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -181,7 +198,7 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
     {
         // PDO placeholders cannot be used for identifiers or DDL keywords:
         // use quoteIdentifier() for the db name and interpolate enum values directly (trusted).
-        $query = sprintf(
+        $query = \sprintf(
             'CREATE DATABASE IF NOT EXISTS %s CHARACTER SET %s COLLATE %s',
             $this->quoteIdentifier($dbName),
             $charset->value,
@@ -192,13 +209,13 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function createDummyTable(): bool
     {
-        $query = sprintf("CREATE TABLE `jujutsu_kaisen_cast` (
+        $query = \sprintf("CREATE TABLE `jujutsu_kaisen_cast` (
                 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `nome` VARCHAR(100) NOT NULL,
                 `tecnica` VARCHAR(255) NOT NULL,
@@ -211,7 +228,7 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -227,13 +244,13 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function createDummyTableTwo(): bool
     {
-        $query = sprintf("CREATE TABLE `jojo_cast` (
+        $query = \sprintf("CREATE TABLE `jojo_cast` (
                 `id` INT UNSIGNED NOT NULL AUTO_INCREMENT,
                 `nome` VARCHAR(100) NOT NULL COMMENT 'Nome del personaggio (es. Jotaro Kujo)',
                 `stand` VARCHAR(100) DEFAULT NULL COMMENT 'Nome dello Stand (es. Star Platinum)',
@@ -247,7 +264,7 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -265,27 +282,27 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function dropDatabase(string $dbName): bool
     {
         // Identifier cannot be a PDO placeholder — use quoteIdentifier().
-        $query = sprintf('DROP DATABASE IF EXISTS %s', $this->quoteIdentifier($dbName));
+        $query = \sprintf('DROP DATABASE IF EXISTS %s', $this->quoteIdentifier($dbName));
         try {
             $stmt = $this->pdo->prepare($query);
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function dropUser(string $username, string $host = '%'): bool
     {
         // Account strings 'user'@'host' in DDL cannot use PDO placeholders — use PDO::quote().
-        $query = sprintf(
+        $query = \sprintf(
             'DROP USER IF EXISTS %s@%s',
             $this->pdo->quote($username),
             $this->pdo->quote($host)
@@ -295,13 +312,13 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function dropTable(string $table): bool
     {
-        $query = sprintf(
+        $query = \sprintf(
             'DROP TABLE IF EXISTS %s',
             $table
         );
@@ -310,18 +327,18 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function emptyTable(string $table): bool
     {
-        $query = sprintf(
+        $query = \sprintf(
             'DELETE FROM %s WHERE 1 = 1;',
             $table
         );
 
-        $queryResetAutoIncrement = sprintf(
+        $queryResetAutoIncrement = \sprintf(
             'ALTER TABLE %s AUTO_INCREMENT = 1',
             $table
         );
@@ -331,7 +348,7 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute() && $stmtAlter->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -346,15 +363,15 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
             $stmt->bindValue(':user', $username);
             $stmt->execute();
 
-            return $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            return $this->fetchColumnList($stmt);
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function changeUserPassword(string $username, string $newPassword, string $host = '%'): bool
     {
-        $query = sprintf(
+        $query = \sprintf(
             'ALTER USER %s@%s IDENTIFIED BY %s',
             $this->pdo->quote($username),
             $this->pdo->quote($host),
@@ -365,14 +382,14 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function createUser(string $username, string $password, string $host = '%'): bool
     {
         // Account strings and IDENTIFIED BY value in DDL cannot use PDO placeholders — use PDO::quote().
-        $query = sprintf(
+        $query = \sprintf(
             'CREATE USER %s@%s IDENTIFIED BY %s',
             $this->pdo->quote($username),
             $this->pdo->quote($host),
@@ -383,7 +400,7 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -391,7 +408,7 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
     {
         // Identifiers and account strings in DDL cannot use PDO placeholders.
         // $privileges is a caller-controlled keyword string (e.g. 'ALL PRIVILEGES', 'SELECT,INSERT').
-        $query = sprintf(
+        $query = \sprintf(
             'GRANT %s ON %s.* TO %s@%s',
             $privileges,
             $this->quoteIdentifier($dbName),
@@ -403,7 +420,7 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -446,10 +463,10 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return array_map(
                 MysqlUser::fromArray(...),
-                $stmt->fetchAll(\PDO::FETCH_ASSOC)
+                $this->fetchAllAssoc($stmt)
             );
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -489,29 +506,29 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
             $stmt->execute();
 
             $result = [];
-            foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+            foreach ($this->fetchAllAssoc($stmt) as $row) {
                 $privs = [];
                 foreach ($privMap as $col => $priv) {
-                    if (($row[$col] ?? 'N') === 'Y') {
+                    if ('Y' === $this->epti->getStringValueFromArray($col, $row, forceString: true)) {
                         $privs[] = $priv;
                     }
                 }
                 $result[] = [
-                    'db' => $row['Db'],
+                    'db' => $this->epti->getStringValueFromArray('Db', $row, forceString: true),
                     'privileges' => $privs,
-                    'all_privileges' => count($privs) === count($privMap),
+                    'all_privileges' => \count($privs) === \count($privMap),
                 ];
             }
 
             return $result;
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function revokeAllPrivilegesOnDb(string $dbName, string $username, string $host = '%'): bool
     {
-        $query = sprintf(
+        $query = \sprintf(
             'REVOKE ALL PRIVILEGES ON %s.* FROM %s@%s',
             $this->quoteIdentifier($dbName),
             $this->pdo->quote($username),
@@ -522,7 +539,7 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -534,19 +551,19 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
     public function killProcessById(int $processId): bool
     {
-        $query = sprintf('KILL %s', $processId);
+        $query = \sprintf('KILL %s', $processId);
         try {
             $stmt = $this->pdo->prepare($query);
 
             return $stmt->execute();
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -558,9 +575,9 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             $stmt->execute();
 
-            return InnodbStatus::fromArray($stmt->fetch(\PDO::FETCH_ASSOC));
+            return InnodbStatus::fromArray($this->fetchOneAssoc($stmt));
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -584,16 +601,14 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
 
             $stmt->execute();
 
-            $resultSet = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             $result = [];
-            foreach ($resultSet as $row) {
-                $pl = ProcessList::fromArray($row);
-                $result[] = $pl;
+            foreach ($this->fetchAllAssoc($stmt) as $row) {
+                $result[] = ProcessList::fromArray($row);
             }
 
             return $result;
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -603,11 +618,10 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
         try {
             $stmt = $this->pdo->prepare($query);
             $stmt->execute();
-            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-            return (int) ($row['Value'] ?? 0);
+            return $this->epti->getIntValueFromArray('Value', $this->fetchOneAssoc($stmt));
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -618,13 +632,13 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
             $stmt = $this->pdo->prepare($query);
             $stmt->execute();
 
-            return (int) ($stmt->fetch(\PDO::FETCH_ASSOC)['cnt'] ?? 0);
+            return $this->epti->getIntValueFromArray('cnt', $this->fetchOneAssoc($stmt));
         } catch (\PDOException $pdoException) {
             // MySQL error 1227: insufficient PROCESS privilege — degrade gracefully
             if (isset($pdoException->errorInfo[1]) && 1227 === $pdoException->errorInfo[1]) {
                 return null;
             }
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -635,13 +649,13 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
             $stmt = $this->pdo->prepare($query);
             $stmt->execute();
 
-            return (int) ($stmt->fetch(\PDO::FETCH_ASSOC)['cnt'] ?? 0);
+            return $this->epti->getIntValueFromArray('cnt', $this->fetchOneAssoc($stmt));
         } catch (\PDOException $pdoException) {
             // MySQL error 1227: insufficient PROCESS privilege — degrade gracefully
             if (isset($pdoException->errorInfo[1]) && 1227 === $pdoException->errorInfo[1]) {
                 return null;
             }
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -662,7 +676,7 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
                   FROM information_schema.SCHEMATA s
                   LEFT JOIN information_schema.TABLES t ON t.TABLE_SCHEMA = s.SCHEMA_NAME
                   WHERE s.SCHEMA_NAME NOT IN (:information_schema, :mysql, :performance_schema, :sys)
-                  '.$andWhere.'
+                  ' . $andWhere . '
                   GROUP BY s.SCHEMA_NAME
                   ORDER BY s.SCHEMA_NAME';
 
@@ -677,9 +691,77 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
             }
             $stmt->execute();
 
-            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            return array_map(fn (array $row): array => [
+                'db_name' => $this->epti->getStringValueFromArray('db_name', $row, forceString: true),
+                'table_count' => $this->epti->getIntValueFromArray('table_count', $row),
+                'size_bytes' => $this->epti->getIntValueFromArray('size_bytes', $row),
+            ], $this->fetchAllAssoc($stmt));
         } catch (\PDOException $pdoException) {
-            throw new RepositoryException(__METHOD__.$pdoException->getMessage(), 0, $pdoException);
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
+        }
+    }
+
+    /**
+     * Returns, for every base table of the given database, the ordered list of its column names.
+     * Used to feed the SQL editor's autocomplete (CodeMirror sql-hint) with schema info.
+     *
+     * @return array<string, list<string>>
+     */
+    public function getColumnsBySchema(string $dbName): array
+    {
+        $query = 'SELECT TABLE_NAME, COLUMN_NAME
+                  FROM information_schema.COLUMNS
+                  WHERE TABLE_SCHEMA = :db_name
+                  ORDER BY TABLE_NAME, ORDINAL_POSITION';
+
+        try {
+            $stmt = $this->pdo->prepare($query);
+            $stmt->bindValue(':db_name', $dbName);
+            $stmt->execute();
+
+            $tables = [];
+            foreach ($this->fetchAllAssoc($stmt) as $row) {
+                $tableName = $this->epti->getStringValueFromArray('TABLE_NAME', $row, forceString: true);
+                $tables[$tableName][] = $this->epti->getStringValueFromArray('COLUMN_NAME', $row, forceString: true);
+            }
+
+            return $tables;
+        } catch (\PDOException $pdoException) {
+            throw new RepositoryException(__METHOD__ . $pdoException->getMessage(), 0, $pdoException);
+        }
+    }
+
+    /**
+     * Executes an arbitrary single SQL statement typed by the user in the query console.
+     * SELECT-like statements return their result set; other statements (INSERT/UPDATE/
+     * DELETE/DDL) return the number of affected rows.
+     *
+     * @return array{columns: list<string>, rows: list<array<string, mixed>>, affected_rows: int, is_select: bool}
+     */
+    public function runQuery(string $sql): array
+    {
+        try {
+            $stmt = $this->pdo->query($sql);
+
+            if (false === $stmt || 0 === $stmt->columnCount()) {
+                return [
+                    'columns' => [],
+                    'rows' => [],
+                    'affected_rows' => false === $stmt ? 0 : $stmt->rowCount(),
+                    'is_select' => false,
+                ];
+            }
+
+            $rows = $this->fetchAllAssoc($stmt);
+
+            return [
+                'columns' => [] === $rows ? [] : array_keys($rows[0]),
+                'rows' => $rows,
+                'affected_rows' => \count($rows),
+                'is_select' => true,
+            ];
+        } catch (\PDOException $pdoException) {
+            throw new RepositoryException(__METHOD__ . ': ' . $pdoException->getMessage(), 0, $pdoException);
         }
     }
 
@@ -689,6 +771,6 @@ readonly class DatabaseSchemaRepository extends AbstractManagerRepositoryPDO
      */
     private function quoteIdentifier(string $identifier): string
     {
-        return '`'.str_replace('`', '``', $identifier).'`';
+        return '`' . str_replace('`', '``', $identifier) . '`';
     }
 }

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Form;
 
 use App\Entity\AppUser;
@@ -14,6 +16,9 @@ use Symfony\Component\Validator\Constraints\IsTrue;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
+/**
+ * @extends AbstractType<AppUser>
+ */
 class RegistrationFormType extends AbstractType
 {
     #[\Override]
@@ -46,9 +51,9 @@ class RegistrationFormType extends AbstractType
                         ),
                         new Length(
                             min: 8,
-                            minMessage: 'Your password should be at least {{ limit }} characters',
                             // max length allowed by Symfony for security reasons
                             max: 4096,
+                            minMessage: 'Your password should be at least {{ limit }} characters',
                         ),
                     ],
                 ])

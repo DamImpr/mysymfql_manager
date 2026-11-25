@@ -1,14 +1,49 @@
 <?php
 
 $finder = (new PhpCsFixer\Finder())
-    ->in(__DIR__)
-    ->exclude('var')
-    ->exclude('vendor')
+        ->in(__DIR__)
+        ->exclude('var')
+        ->exclude('vendor')
+        ->notPath([
+            'config/bundles.php',
+            'config/reference.php',
+        ])
 ;
 
 return (new PhpCsFixer\Config())
-    ->setRules([
-        '@Symfony' => true,
-    ])
-    ->setFinder($finder)
+                ->setRules([
+                    '@Symfony' => true,
+                    '@Symfony:risky' => true,
+                    // `declare(strict_types=1);` placement is owned by Rector
+                    // (DeclareStrictTypesRector, scoped to rector.php's paths, Command excluded).
+                    // @Symfony:risky ships `declare_strict_types => ['strategy' => 'remove']`,
+                    // which strips what Rector adds — disable the fixer so the two stay consistent.
+                    'declare_strict_types' => false,
+                    'array_syntax' => ['syntax' => 'short'],
+                    'list_syntax' => ['syntax' => 'short'],
+                    'modernize_types_casting' => true,
+                    'is_null' => true,
+                    'no_alias_functions' => true,
+                    // Pulizia
+                    'no_unused_imports' => true,
+                    'no_empty_comment' => true,
+                    'no_empty_phpdoc' => true,
+                    'no_useless_return' => true,
+                    'no_useless_else' => true,
+                    'no_empty_statement' => true,
+                    'no_extra_blank_lines' => ['tokens' => ['extra', 'use', 'return']],
+                    // Modernizzazione safe
+                    'standardize_not_equals' => true,
+                    'single_quote' => true,
+                    'short_scalar_cast' => true,
+                    'magic_constant_casing' => true,
+                    'native_function_casing' => true,
+                    'trailing_comma_in_multiline' => ['elements' => ['arrays']],
+                    'concat_space' => ['spacing' => 'one'],
+                    'cast_spaces' => ['space' => 'single'],
+                    'object_operator_without_whitespace' => true,
+                    'ternary_operator_spaces' => true,
+                ])
+                ->setRiskyAllowed(true)
+                ->setFinder($finder)
 ;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Form;
 
 use App\Entity\AppUser;
@@ -11,6 +13,9 @@ use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
+/**
+ * @extends AbstractType<DatabaseOwner>
+ */
 class DatabaseOwnerType extends AbstractType
 {
     #[\Override]
@@ -19,8 +24,8 @@ class DatabaseOwnerType extends AbstractType
         $builder
             ->add('sqlClient', EntityType::class, [
                 'class' => SqlClient::class,
-                'choice_label' => fn (SqlClient $c): string => $c->getName().' — '.$c->getHost().':'.$c->getPort(),
-                'choice_attr' => fn (SqlClient $c): array => ['data-name' => $c->getName()],
+                'choice_label' => static fn (SqlClient $c): string => $c->getName() . ' — ' . $c->getHost() . ':' . $c->getPort(),
+                'choice_attr' => static fn (SqlClient $c): array => ['data-name' => $c->getName()],
                 'label' => 'Server MySQL',
                 'placeholder' => '— Select a server —',
                 'attr' => ['class' => 'form-select'],

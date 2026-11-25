@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
 use App\Entity\AppUser;
@@ -10,7 +12,7 @@ use Symfony\Component\Routing\Attribute\Route;
 
 final class DefaultController extends AbstractController
 {
-    #[Route('/', name: 'app_default')]
+    #[Route(path: '/', name: 'app_default')]
     public function index(SqlClientRepository $sqlClientRepository): Response
     {
         $user = $this->getUser();

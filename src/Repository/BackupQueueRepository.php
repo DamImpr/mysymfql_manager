@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Repository;
 
 use App\Entity\BackupQueue;
@@ -21,13 +23,15 @@ class BackupQueueRepository extends ServiceEntityRepository
      */
     public function findLastOneDequeable(): ?BackupQueue
     {
-        return $this->createQueryBuilder('b')
+        $result = $this->createQueryBuilder('b')
             ->andWhere('b.isDequeued = :dequeued')
-            ->setParameter('dequeued', false)
+            ->setParameter('dequeued', value: false)
             ->orderBy('b.requestDate', 'DESC')
             ->setMaxResults(1)
             ->getQuery()
             ->getOneOrNullResult()
         ;
+
+        return $result instanceof BackupQueue ? $result : null;
     }
 }

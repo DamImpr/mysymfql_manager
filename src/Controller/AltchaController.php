@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Controller;
 
 use AltchaOrg\Altcha\Altcha;
@@ -12,11 +14,10 @@ use TypeIdentifier\Service\EffectivePrimitiveTypeIdentifierService;
 
 final class AltchaController extends AbstractController
 {
-    #[Route('/altcha_challenge', name: 'app_altcha_challenge')]
-    public function index(): JsonResponse
+    #[Route(path: '/altcha_challenge', name: 'app_altcha_challenge')]
+    public function index(EffectivePrimitiveTypeIdentifierService $epti): JsonResponse
     {
-        $epti = new EffectivePrimitiveTypeIdentifierService();
-        $hmacKey = $epti->getTypedValueFromServer(needle: 'ALTCHAKEY', trim: true, forceString: true, sanitizeHtml: true);
+        $hmacKey = $epti->getStringValueFromServer(needle: 'ALTCHAKEY', trim: true, forceString: true, sanitizeHtml: true);
 
         $altcha = new Altcha($hmacKey);
         $randomIntValue = random_int(75000, 150000);

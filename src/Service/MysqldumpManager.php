@@ -16,12 +16,11 @@ use TypeIdentifier\Service\EffectivePrimitiveTypeIdentifierService;
 final readonly class MysqldumpManager
 {
     private string $backupPath;
-    private EffectivePrimitiveTypeIdentifierService $epti;
 
-    public function __construct()
+    public function __construct(?EffectivePrimitiveTypeIdentifierService $epti = null)
     {
-        $disabledFunctions = array_map(trim(...), explode(',', ini_get('disable_functions')));
-        if (in_array('exec', $disabledFunctions, true)) {
+        $disabledFunctions = array_map(trim(...), explode(',', \ini_get('disable_functions') ?: ''));
+        if (\in_array('exec', $disabledFunctions, strict: true)) {
             throw new \RuntimeException('The exec() function is disabled in PHP. To enable it, remove "exec" from "disable_functions" in the php.ini file (e.g. /etc/php/8.x/fpm/php.ini) and restart PHP-FPM.');
         }
 
@@ -29,21 +28,24 @@ final readonly class MysqldumpManager
             throw new \RuntimeException('The mysqldump command was not found in the system PATH. Install it with: "apt install mysql-client" (Debian/Ubuntu) or "yum install mysql" (RHEL/CentOS), then verify it is accessible in the PATH of the user running PHP.');
         }
 
-        $this->epti = new EffectivePrimitiveTypeIdentifierService();
+        $epti ??= new EffectivePrimitiveTypeIdentifierService();
 
-        $this->backupPath = $this->epti->getTypedValueFromEnv(
+        $this->backupPath = $epti->getStringValueFromEnv(
             needle: 'BACKUP_PATH', trim: true, forceString: true, sanitizeHtml: false
         );
     }
 
+    /**
+     * @return array{is_valid: bool, exec_result: string|false|null, output: list<string>|null, result_code: int|null, backup_filename: string, msg: string}
+     */
     public function createBackup(SqlClient $sqlClient, string $dbName, ?string $table = null): array
     {
         if (!preg_match('/^\w+$/', $dbName)) {
-            throw new \InvalidArgumentException(sprintf('Invalid database name: "%s". Only alphanumeric characters and underscores are allowed.', $dbName));
+            throw new \InvalidArgumentException(\sprintf('Invalid database name: "%s". Only alphanumeric characters and underscores are allowed.', $dbName));
         }
 
         if (null !== $table && !preg_match('/^\w+$/', $table)) {
-            throw new \InvalidArgumentException(sprintf('Invalid table name: "%s". Only alphanumeric characters and underscores are allowed.', $table));
+            throw new \InvalidArgumentException(\sprintf('Invalid table name: "%s". Only alphanumeric characters and underscores are allowed.', $table));
         }
 
         $host = $sqlClient->getHost();
@@ -52,8 +54,8 @@ final readonly class MysqldumpManager
         $now = new \DateTime();
         $dateString = $now->format('Y-m-d_H-i-s');
 
-        if (!is_dir($this->backupPath) && !mkdir($this->backupPath, 0755, true)) {
-            $msg = sprintf('Unable to create the backup directory: %s', $this->backupPath);
+        if (!is_dir($this->backupPath) && !mkdir($this->backupPath, 0755, recursive: true)) {
+            $msg = \sprintf('Unable to create the backup directory: %s', $this->backupPath);
 
             // throw new \RuntimeException(sprintf('Unable to create the backup directory: %s', $this->backupPath));
             return [
@@ -82,14 +84,14 @@ final readonly class MysqldumpManager
             ];
         }
 
-        file_put_contents($cnfFile, sprintf("[client]\npassword=%s\n", addslashes((string) $pass)));
+        file_put_contents($cnfFile, \sprintf("[client]\npassword=%s\n", addslashes((string) $pass)));
         chmod($cnfFile, 0600);
 
         try {
-            $suffix = null !== $table ? '_'.$table : '_full';
-            $backupFilename = $this->backupPath.'/bkp_'.$dateString.'_'.$dbName.$suffix.'.sql';
+            $suffix = null !== $table ? '_' . $table : '_full';
+            $backupFilename = $this->backupPath . '/bkp_' . $dateString . '_' . $dbName . $suffix . '.sql';
             $dbLevelFlags = null === $table ? '--routines --events' : '';
-            $command = sprintf(
+            $command = \sprintf(
                 'mysqldump --defaults-extra-file=%s -h %s -u %s --single-transaction --set-gtid-purged=OFF --triggers %s %s %s > %s',
                 escapeshellarg($cnfFile),
                 escapeshellarg((string) $host),
@@ -131,46 +133,49 @@ final readonly class MysqldumpManager
             return [];
         }
 
-        $files = glob($this->backupPath.'/bkp_*.sql');
+        $files = glob($this->backupPath . '/bkp_*.sql');
 
         if (false === $files) {
             return [];
         }
 
-        $isAdmin = in_array('ROLE_ADMIN', $user->getRoles(), true);
+        $isAdmin = \in_array('ROLE_ADMIN', $user->getRoles(), strict: true);
 
         $allowedDbNames = $isAdmin ? [] : array_map(
-            fn (DatabaseOwner $o): string => $o->getDbName(),
+            static fn (DatabaseOwner $o): string => $o->getDbName() ?? '',
             $allOwnedDatabased
         );
 
-        $filtered = $isAdmin ? $files : array_filter($files, function (string $file) use ($allowedDbNames): bool {
+        $filtered = $isAdmin ? $files : array_filter($files, static function (string $file) use ($allowedDbNames): bool {
             // Format: bkp_YYYY-MM-DD_HH-II-SS_dbName_suffix.sql
             // Remove the fixed prefix to isolate dbName_suffix.sql
             $rest = (string) preg_replace('/^bkp_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}_/', '', basename($file));
 
-            return array_any($allowedDbNames, fn (string $dbName): bool => str_starts_with($rest, $dbName.'_'));
+            return array_any($allowedDbNames, static fn (string $dbName): bool => str_starts_with($rest, $dbName . '_'));
         });
 
-        $backups = array_map(fn (string $file): BackupDump => BackupDump::fromArray([
+        $backups = array_map(static fn (string $file): BackupDump => BackupDump::fromArray([
             'filename' => basename($file),
             'path' => $file,
             'size' => (int) filesize($file),
             'mtime' => (int) filemtime($file),
         ]), $filtered);
 
-        usort($backups, fn (BackupDump $a, BackupDump $b): int => $b->mtime <=> $a->mtime);
+        usort($backups, static fn (BackupDump $a, BackupDump $b): int => $b->mtime <=> $a->mtime);
 
         return $backups;
     }
 
+    /**
+     * @return list<BackupDump>
+     */
     public function listAllBackups(): array
     {
         if (!is_dir($this->backupPath)) {
             return [];
         }
 
-        $files = glob($this->backupPath.'/bkp_*.sql');
+        $files = glob($this->backupPath . '/bkp_*.sql');
 
         if (false === $files) {
             return [];
@@ -186,28 +191,31 @@ final readonly class MysqldumpManager
             ]);
         }
 
-        usort($backups, fn (BackupDump $a, BackupDump $b): int => $b->mtime <=> $a->mtime);
+        usort($backups, static fn (BackupDump $a, BackupDump $b): int => $b->mtime <=> $a->mtime);
 
         return $backups;
     }
 
+    /**
+     * @return array<string, bool|string|int|list<string>>
+     */
     public function restoreBackup(SqlClient $sqlClient, string $dbName, string $backupFilename, ?string $table = null): array
     {
         if (!preg_match('/^\w+$/', $dbName)) {
-            throw new \InvalidArgumentException(sprintf('Invalid database name: "%s". Only alphanumeric characters and underscores are allowed.', $dbName));
+            throw new \InvalidArgumentException(\sprintf('Invalid database name: "%s". Only alphanumeric characters and underscores are allowed.', $dbName));
         }
 
         if (null !== $table && !preg_match('/^\w+$/', $table)) {
-            throw new \InvalidArgumentException(sprintf('Invalid table name: "%s". Only alphanumeric characters and underscores are allowed.', $table));
+            throw new \InvalidArgumentException(\sprintf('Invalid table name: "%s". Only alphanumeric characters and underscores are allowed.', $table));
         }
 
         $realPath = realpath($backupFilename);
-        if (false === $realPath || !str_starts_with($realPath, realpath($this->backupPath).DIRECTORY_SEPARATOR)) {
+        if (false === $realPath || !str_starts_with($realPath, realpath($this->backupPath) . \DIRECTORY_SEPARATOR)) {
             throw new \InvalidArgumentException('The backup file must be located in the configured backup directory.');
         }
 
         if (!is_readable($realPath)) {
-            throw new \RuntimeException(sprintf('The backup file is not readable: %s', $realPath));
+            throw new \RuntimeException(\sprintf('The backup file is not readable: %s', $realPath));
         }
 
         $host = $sqlClient->getHost();
@@ -219,11 +227,11 @@ final readonly class MysqldumpManager
             throw new \RuntimeException('Unable to create the temporary file for mysql credentials.');
         }
 
-        file_put_contents($cnfFile, sprintf("[client]\npassword=%s\n", addslashes((string) $pass)));
+        file_put_contents($cnfFile, \sprintf("[client]\npassword=%s\n", addslashes((string) $pass)));
         chmod($cnfFile, 0600);
 
         try {
-            $command = sprintf(
+            $command = \sprintf(
                 'mysql --defaults-extra-file=%s -h %s -u %s %s %s < %s',
                 escapeshellarg($cnfFile),
                 escapeshellarg((string) $host),

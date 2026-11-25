@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service;
 
 use App\Component\DateTimeIt;
@@ -15,10 +17,15 @@ use TypeIdentifier\Service\EffectivePrimitiveTypeIdentifierService;
  */
 final readonly class EmailHubService
 {
-    public function __construct(private MailerInterface $mailer)
-    {
+    public function __construct(
+        private MailerInterface $mailer,
+        private EffectivePrimitiveTypeIdentifierService $epti,
+    ) {
     }
 
+    /**
+     * @return array{is_valid: bool, msg: string}
+     */
     public function emailResetPassword(Address $addressTo, string $msg, string $subject): array
     {
         $now = new DateTimeIt();
@@ -33,6 +40,9 @@ final readonly class EmailHubService
         return $this->sendEmail($addressTo, $subject, $context, $templatePath);
     }
 
+    /**
+     * @return array{is_valid: bool, msg: string}
+     */
     public function emailNotify(Address $addressTo, string $msg, string $subject): array
     {
         $now = new DateTimeIt();
@@ -47,10 +57,14 @@ final readonly class EmailHubService
         return $this->sendEmail($addressTo, $subject, $context, $templatePath);
     }
 
+    /**
+     * @param array<string, string> $context
+     *
+     * @return array{is_valid: bool, msg: string}
+     */
     private function sendEmail(Address $addressTo, string $subject, array $context, string $templatePath): array
     {
-        $epti = new EffectivePrimitiveTypeIdentifierService();
-        $emailFrom = $epti->getTypedValueFromEnv(needle: 'EMAIL_FROM', trim: true, forceString: true, sanitizeHtml: false);
+        $emailFrom = $this->epti->getStringValueFromEnv(needle: 'EMAIL_FROM', trim: true, forceString: true, sanitizeHtml: false);
 
         $email = new TemplatedEmail()
                 ->from($emailFrom)

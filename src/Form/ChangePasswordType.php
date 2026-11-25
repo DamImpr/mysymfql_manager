@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Form;
 
 use Symfony\Component\Form\AbstractType;
@@ -10,6 +12,9 @@ use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\NotBlank;
 
+/**
+ * @extends AbstractType<mixed>
+ */
 class ChangePasswordType extends AbstractType
 {
     #[\Override]
@@ -30,7 +35,7 @@ class ChangePasswordType extends AbstractType
                     'second_options' => ['label' => 'Repeat Password'],
                     'constraints' => [
                         new NotBlank(message: 'Please enter a password'),
-                        new Length(min: 8, minMessage: 'Your password must be at least {{ limit }} characters long', max: 4096),
+                        new Length(min: 8, max: 4096, minMessage: 'Your password must be at least {{ limit }} characters long'),
                     ],
                 ]);
     }

@@ -67,25 +67,33 @@ class AppUser implements UserInterface, PasswordAuthenticatedUserInterface, \Str
         return $this;
     }
 
+    #[\Override]
     public function __toString(): string
     {
         return 'AppUser['
                 // . "id=" . $this->id
-                .', username='.$this->username
-                .', email='.$this->email
-                .', roles='.implode(',', $this->roles)
-                .']';
+                . ', username=' . $this->username
+                . ', email=' . $this->email
+                . ', roles=' . implode(',', $this->roles)
+                . ']';
     }
 
     /**
      * A visual identifier that represents this user.
      *
      * @see UserInterface
+     *
+     * @return non-empty-string
      */
     #[\Override]
     public function getUserIdentifier(): string
     {
-        return (string) $this->username;
+        $username = (string) $this->username;
+        if ('' === $username) {
+            throw new \LogicException('AppUser username is not set.');
+        }
+
+        return $username;
     }
 
     /**
@@ -98,7 +106,7 @@ class AppUser implements UserInterface, PasswordAuthenticatedUserInterface, \Str
         // guarantee every user at least has ROLE_USER
         // $roles[] = 'ROLE_USER';
 
-        return \array_unique($roles);
+        return array_unique($roles);
     }
 
     /**
@@ -133,12 +141,12 @@ class AppUser implements UserInterface, PasswordAuthenticatedUserInterface, \Str
     public function __serialize(): array
     {
         $data = (array) $this;
-        $data["\0".self::class."\0password"] = hash('crc32c', (string) $this->password);
+        $data["\0" . self::class . "\0password"] = hash('crc32c', (string) $this->password);
 
         return $data;
     }
 
-    public function equals(AppUser $appUser): bool
+    public function equals(self $appUser): bool
     {
         return $appUser->getEmail() === $this->getEmail()
                && $appUser->getId() === $this->getId()

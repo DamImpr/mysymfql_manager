@@ -33,3 +33,5 @@ phpstan.neon
 ###> docker ###
 /docker/app.env
 ###< docker ###
+/CHANGE/
+/.rector.cache/
